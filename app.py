@@ -7,6 +7,8 @@ from logging import basicConfig, INFO
 from data.config import ADMINS
 from loader import dp,db, bot
 import handlers
+from handlers import dp
+
 
 user_message = 'Пользователь'
 admin_message = 'Админ'
@@ -52,5 +54,8 @@ async def on_startup(dp):
     db.create_tables()
 
 if __name__ == '__main__':
-    executor.start_polling(dp, on_startup=on_startup, skip_updates=False)
+    executor.start_polling(dp, on_startup=on_startup)
+
+
+
 
