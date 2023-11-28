@@ -1,4 +1,6 @@
 from aiogram import types
+from aiogram import Dispatcher
+from aiogram.types import Message
 from aiogram.types import ReplyKeyboardMarkup
 from aiogram.types import ReplyKeyboardRemove
 from aiogram import executor
