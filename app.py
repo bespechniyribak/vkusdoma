@@ -18,7 +18,7 @@ from handlers.user.menu import catalog, cart, delivery_status
 LOCK_PATH = "/tmp/bot.lock"
 DEFAULT_ADMINS = []  # Замените это на реальный список админов
 
-bot = Bot(token='YOUR_BOT_TOKEN')
+bot = Bot(token='6810545901:AAE3iPbhGYcaCV_auyHcjVYdlYClbIRK8oQ')
 dp = Dispatcher(bot)
 
 
