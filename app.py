@@ -15,23 +15,24 @@ import handlers, requests
 from handlers import dp
 from handlers.user.menu import catalog, cart, delivery_status
 
-lock_file = 'bot.lock'
+LOCK_PATH = "/tmp/bot.lock"
 
-def check_if_running():
+def acquire_lock():
     try:
-        file_descriptor = open(lock_file, 'w')
-        fcntl.lockf(file_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        return False
-    except IOError:
-        return True
+        lock_fd = open(LOCK_PATH, 'w')
+        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return lock_fd
+    except (OSError, IOError):
+        print("Another instance of the bot is already running. Exiting.")
+        sys.exit(1)
 
-if check_if_running():
-    print("Another instance of the bot is already running.")
-    sys.exit()
+def release_lock(lock_fd):
+    fcntl.flock(lock_fd, fcntl.LOCK_UN)
+    lock_fd.close()
 
-# Инициализация бота и диспетчера
-bot = Bot(token='6810545901:AAE3iPbhGYcaCV_auyHcjVYdlYClbIRK8oQ')
-dp = Dispatcher(bot)
+def main():
+    lock_fd = acquire_lock()
+
 
 
 
@@ -115,6 +116,8 @@ async def set_bot_commands():
 async def on_startup(dp):
     basicConfig(level=INFO)
     await set_bot_commands()
+
+release_lock(lock_fd)
 
 if __name__ == '__main__':
     executor.start_polling(dp, on_startup=on_startup)
