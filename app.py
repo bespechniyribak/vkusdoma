@@ -1,8 +1,7 @@
 import os
 import sys
 import fcntl
-from aiogram import types
-from aiogram import Dispatcher
+from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message
 from aiogram.types import ReplyKeyboardMarkup
 from aiogram.types import ReplyKeyboardRemove
