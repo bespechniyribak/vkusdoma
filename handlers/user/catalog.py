@@ -1,40 +1,53 @@
 from filters import IsUser
-from aiogram.types import Message
+from aiogram.types import Message, ReplyKeyboardRemove, ReplyKeyboardMarkup
+from aiogram.dispatcher import FSMContext
 from aiogram.types import CallbackQuery
 from aiogram.types.chat import ChatActions
-
+from aiogram.types.input_file import InputFile
 from keyboards.inline.categories import categories_markup
-from .menu import catalog
-from loader import dp, db, bot
+from .menu import catalog, continue_message, stop_message, cart, delivery_status
+from loader import dp, bot
 from keyboards.inline.categories import category_cb
-from keyboards.inline.products_from_catalog import product_markup, product_cb
+import requests
 
 
 @dp.message_handler(IsUser(), text=catalog)
 async def process_catalog(message: Message):
-    await message.answer('Выберите раздел, чтобы вывести список товаров:',
+    await message.answer('Выберите раздел, чтобы увидеть все товары:',
                          reply_markup=categories_markup())
 
 
+@dp.message_handler(IsUser(), text=continue_message)
+async def process_countinue(message: Message):
+    markup = ReplyKeyboardMarkup(selective=True)
+    markup.add(catalog)
+    markup.add(cart)
+    await message.answer('Выберите раздел, чтобы увидеть все товары:',
+                         reply_markup=categories_markup())
+    await message.answer('Выберите категорию товаров', reply_markup=markup)
+
+
+@dp.message_handler(IsUser(), text=stop_message)
+async def process_countinue(message: Message):
+    markup = ReplyKeyboardRemove()
+
+    await message.answer('Спасибо за покупку. Ждем вас в следующий раз', reply_markup=markup)
 
 
 @dp.callback_query_handler(IsUser(), category_cb.filter(action='view'))
 async def category_callback_handler(query: CallbackQuery, callback_data: dict):
-
-    products = db.fetchall('''SELECT * FROM products product
-    WHERE product.tag = (SELECT title FROM categories WHERE idx=?) 
-    AND product.idx NOT IN (SELECT idx FROM cart WHERE cid = ?)''',
-                           (callback_data['id'], query.message.chat.id))
+    products = requests.get(f'http://localhost:8000/bot/product/?cats={callback_data["id"]}').json(),
 
     await query.answer('Все доступные товары.')
     await show_products(query.message, products)
 
+
 from loader import bot
 
+from keyboards.inline.products_from_cart import product_markup, product_cb
 
-from keyboards.inline.products_from_catalog import product_markup
+
 async def show_products(m, products):
-
     if len(products) == 0:
 
         await m.answer('Здесь ничего нет 😢')
@@ -42,22 +55,44 @@ async def show_products(m, products):
     else:
 
         await bot.send_chat_action(m.chat.id, ChatActions.TYPING)
+        for product in products[0]:
+            title = product['title']
+            description = product['description']
+            image = product['image']
+            price = product['price']
+            photo = "/Users/Yuri_K/Downloads/vkusdoma 2/media/" + image.split('media/')[-1]
+            markup = product_markup(product['id'], 1, product['price'])
+            text = f"<b>{title}</b>\n\n{description}"
 
-        for idx, title, body, image, price, _ in products:
-
-            markup = product_markup(idx, price)
-            text = f'<b>{title}</b>\n\n{body}'
-
-            await m.answer_photo(photo=image,
+            await m.answer_photo(photo=InputFile(photo),
                                  caption=text,
                                  reply_markup=markup)
 
 
-@dp.callback_query_handler(IsUser(), product_cb.filter(action='add'))
-async def add_product_callback_handler(query: CallbackQuery,
-                                       callback_data: dict):
-    db.query('INSERT INTO cart VALUES (?, ?, 1)',
-             (query.message.chat.id, callback_data['id']))
+@dp.callback_query_handler(IsUser(), product_cb.filter(action='count'), state='*')
+@dp.callback_query_handler(IsUser(), product_cb.filter(action='increase'), state='*')
+@dp.callback_query_handler(IsUser(), product_cb.filter(action='decrease'), state='*')
+@dp.callback_query_handler(IsUser(), product_cb.filter(action='add'), state='*')
+async def product_callback_handler(query: CallbackQuery, callback_data: dict, state: FSMContext):
+    idx = callback_data['id']
+    action = callback_data['action']
+    count = int(callback_data['current_count'])
+    price = float(callback_data['price'])
 
-    await query.answer('Товар добавлен в корзину!')
-    await query.message.delete()
+    if 'count' == action:
+        count = 0
+        keyboard = product_markup(idx, count, price)
+        await query.message.edit_reply_markup(keyboard)
+
+    elif action == 'add':
+        res = requests.post('http://localhost:8000/bot/cart/',
+                            {'product': idx, 'quantity': count, 'user_id': query.from_user.id})
+        await query.message.edit_caption("Товар добавлен в корзину. "
+                                         "Для просмотра корзины нажимайте внизу 'Корзина',"
+                                         " либо нажмите на синюю кнопку слева и выберите 'Ваша корзина'")
+    elif action == 'increase':
+        keyboard = product_markup(idx, count + 1, price)
+        await query.message.edit_reply_markup(keyboard)
+    else:
+        keyboard = product_markup(idx, count - 1, price)
+        await query.message.edit_reply_markup(keyboard)

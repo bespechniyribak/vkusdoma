@@ -8,14 +8,16 @@ from aiogram.types import ReplyKeyboardMarkup
 from aiogram.types import ReplyKeyboardRemove
 from aiogram.types import ContentType
 from aiogram import types
-
+import requests
 from handlers.user.menu import settings
 from states import CategoryState, ProductState
 from loader import bot
 from loader import dp, db
 from filters import IsAdmin
 from keyboards.default.markups import *
+from aiogram.types import InputFile
 
+basedir = "/Users/Yuri_K/Downloads/vkusdoma 2"
 
 category_cb = CallbackData('category', 'id', 'action')
 product_cb = CallbackData('product', 'id', 'action')
@@ -27,11 +29,12 @@ delete_category = '🗑️ Удалить категорию'
 async def process_settings(message: Message):
 
     markup = InlineKeyboardMarkup()
-
-    for idx, title in db.fetchall('SELECT * FROM categories'):
+    cats = requests.get('http://localhost:8000/bot/category/').json()
+    print(cats)
+    for cat in cats:
 
         markup.add(InlineKeyboardButton(
-            title, callback_data=category_cb.new(id=idx, action='view')))
+            cat['title'], callback_data=category_cb.new(id=cat['id'], action='view')))
 
     markup.add(InlineKeyboardButton(
         '+ Добавить категорию', callback_data='add_category'))
@@ -50,8 +53,7 @@ async def add_category_callback_handler(query: CallbackQuery):
 async def set_category_title_handler(message: Message, state: FSMContext):
 
     category = message.text
-    idx = md5(category.encode('utf-8')).hexdigest()
-    db.query('INSERT INTO categories VALUES (?, ?)', (idx, category))
+    requests.post("http://localhost:8000/bot/category/",{"title":category})
 
     await state.finish()
     await process_settings(message)
@@ -59,14 +61,14 @@ async def set_category_title_handler(message: Message, state: FSMContext):
 async def category_callback_handler(query: CallbackQuery, callback_data: dict,
                                     state: FSMContext):
     category_idx = callback_data['id']
+    print(category_idx)
 
-    products = db.fetchall('''SELECT * FROM products product
-    WHERE product.tag = (SELECT title FROM categories WHERE idx=?)''',
-                           (category_idx,))
 
+    products = requests.get(f'http://localhost:8000/bot/product/?cats={category_idx}').json()
+    print(products)
     await query.message.delete()
     await query.answer('Все добавленные товары в эту категорию.')
-    await state.update_data(category_index=category_idx)
+    await state.update_data(category=category_idx)
     await show_products(query.message, products, category_idx)
 
 
@@ -74,17 +76,19 @@ async def category_callback_handler(query: CallbackQuery, callback_data: dict,
 async def show_products(m, products, category_idx):
     await bot.send_chat_action(m.chat.id, ChatActions.TYPING)
 
-    for idx, title, body, image, price, tag in products:
-        text = f'<b>{title}</b>\n\n{body}\n\nЦена: {price} евро.'
+    for product in products:
+        text = f'<b>{product["title"]}</b>\n\n{product["description"]}\n\nЦена: {product["price"]} евро.'
 
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton(
             '🗑️ Удалить',
-            callback_data=product_cb.new(id=idx, action='delete')))
-
-        await m.answer_photo(photo=image,
-                             caption=text,
-                             reply_markup=markup)
+            callback_data=product_cb.new(id=product['id'], action='delete')))
+        image = product['image']
+        image = image.split("media")[-1]
+        photo = "/Users/Yuri_K/Downloads/vkusdoma 2/media/"+image
+        await m.answer_photo(photo=InputFile(photo),
+                                caption=text,
+                                reply_markup=markup)
 
     markup = ReplyKeyboardMarkup()
     markup.add(add_product)
@@ -97,14 +101,11 @@ async def show_products(m, products, category_idx):
 @dp.message_handler(IsAdmin(), text=delete_category)
 async def delete_category_handler(message: Message, state: FSMContext):
     async with state.proxy() as data:
-        if 'category_index' in data.keys():
-            idx = data['category_index']
+        print(data)
+        if 'category' in data.keys():
+            idx = data['category']
 
-            db.query(
-                'DELETE FROM products WHERE tag IN (SELECT '
-                'title FROM categories WHERE idx=?)',
-                (idx,))
-            db.query('DELETE FROM categories WHERE idx=?', (idx,))
+            res = requests.delete(f'http://localhost:8000/bot/category/{idx}/')
 
             await message.answer('Готово!', reply_markup=ReplyKeyboardRemove())
             await process_settings(message)
@@ -125,31 +126,34 @@ async def process_cancel(message: Message, state: FSMContext):
 
     await process_settings(message)
 
+@dp.message_handler(IsAdmin(), text=back_message, state=ProductState.title)
+async def process_title_back(message: Message, state: FSMContext):
+    # state.finish()
+    # await process_add_product(message)
+    await process_cancel(message, state)
+
 @dp.message_handler(IsAdmin(), state=ProductState.title)
 async def process_title(message: Message, state: FSMContext):
     async with state.proxy() as data:
         data['title'] = message.text
 
-    await ProductState.next()
+    await ProductState.description.set()
     await message.answer('Описание?', reply_markup=back_markup())
 
 
-@dp.message_handler(IsAdmin(), text=back_message, state=ProductState.title)
-async def process_title_back(message: Message, state: FSMContext):
-    await process_add_product(message)
 
-@dp.message_handler(IsAdmin(), text=back_message, state=ProductState.body)
-async def process_body_back(message: Message, state: FSMContext):
+@dp.message_handler(IsAdmin(), text=back_message, state=ProductState.description)
+async def process_description_back(message: Message, state: FSMContext):
     await ProductState.title.set()
 
     async with state.proxy() as data:
         await message.answer(f"Изменить название с <b>{data['title']}</b>?",
                              reply_markup=back_markup())
 
-@dp.message_handler(IsAdmin(), state=ProductState.body)
-async def process_body(message: Message, state: FSMContext):
+@dp.message_handler(IsAdmin(), state=ProductState.description)
+async def process_description(message: Message, state: FSMContext):
     async with state.proxy() as data:
-        data['body'] = message.text
+        data['description'] = message.text
 
     await ProductState.next()
     await message.answer('Фото?', reply_markup=back_markup())
@@ -160,10 +164,14 @@ async def process_body(message: Message, state: FSMContext):
 async def process_image_photo(message: Message, state: FSMContext):
     fileID = message.photo[-1].file_id
     file_info = await bot.get_file(fileID)
-    downloaded_file = (await bot.download_file(file_info.file_path)).read()
+    downloaded_file = await bot.download_file(file_info.file_path)
+    new_filename = f"/media/products/{message.chat.id}_{message.message_id}.jpg"
+    with open(basedir + new_filename, 'wb') as new_file:
+        new_file.write(downloaded_file.read())
 
     async with state.proxy() as data:
-        data['image'] = downloaded_file
+        data['image'] = new_filename
+        data['photo'] = f"{message.chat.id}_{message.message_id}.jpg"
 
     await ProductState.next()
     await message.answer('Цена?', reply_markup=back_markup())
@@ -175,16 +183,16 @@ async def process_price(message: Message, state: FSMContext):
         data['price'] = message.text
 
         title = data['title']
-        body = data['body']
+        description = data['description']
         price = data['price']
 
         await ProductState.next()
-        text = f'<b>{title}</b>\n\n{body}\n\nЦена: {price} евро.'
+        text = f'<b>{title}</b>\n\n{description}\n\nЦена: {price} евро.'
 
 
         markup = check_markup()
 
-        await message.answer_photo(photo=data['image'],
+        await message.answer_photo(photo=InputFile(basedir+data['image']),
                                    caption=text,
                                    reply_markup=markup)
 
@@ -192,19 +200,30 @@ async def process_price(message: Message, state: FSMContext):
                     state=ProductState.confirm)
 async def process_confirm(message: Message, state: FSMContext):
     async with state.proxy() as data:
+        print(data)
         title = data['title']
-        body = data['body']
-        image = data['image']
+        description = data['description']
+        image_path = basedir + data['image']
         price = data['price']
+        category = data['category']
+        # Read the file contents into memory
+        with open(image_path, 'rb') as image_file:
+            image_data = image_file.read()
 
-        tag = db.fetchone(
-            'SELECT title FROM categories WHERE idx=?',
-            (data['category_index'],))[0]
-        idx = md5(' '.join([title, body, price, tag]
-                           ).encode('utf-8')).hexdigest()
+        # Create a dictionary with form data
+        form_data = {
+            'title': title,
+            'description': description,
+            'price': price,
+            'category': category,
+            "image": "http://localhost:8000"+data['image']
+        }
 
-        db.query('INSERT INTO products VALUES (?, ?, ?, ?, ?, ?)',
-                 (idx, title, body, image, (price), tag))
+        # Include the image data in the form data with the correct field name
+
+        # Send the POST request with the correct content type
+        res = requests.post("http://localhost:8000/bot/product/", data=form_data)
+        
 
     await state.finish()
     await message.answer('Готово!', reply_markup=ReplyKeyboardRemove())
@@ -214,7 +233,9 @@ async def process_confirm(message: Message, state: FSMContext):
 async def delete_product_callback_handler(query: CallbackQuery,
                                           callback_data: dict):
     product_idx = callback_data['id']
-    db.query('DELETE FROM products WHERE idx=?', (product_idx,))
+
+    res = requests.delete(f"http://localhost:8000/bot/product/{product_idx}/")
+    print(res)
     await query.answer('Удалено!')
     await query.message.delete()
 
@@ -231,11 +252,11 @@ async def process_confirm_back(message: Message, state: FSMContext):
 async def process_image_url(message: Message, state: FSMContext):
     if message.text == back_message:
 
-        await ProductState.body.set()
+        await ProductState.description.set()
 
         async with state.proxy() as data:
 
-            await message.answer(f"Изменить описание с <b>{data['body']}</b>?",
+            await message.answer(f"Изменить описание с <b>{data['description']}</b>?",
                                  reply_markup=back_markup())
     else:
 

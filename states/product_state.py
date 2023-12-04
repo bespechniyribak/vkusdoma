@@ -4,7 +4,7 @@ class CategoryState(StatesGroup):
 
 class ProductState(StatesGroup):
     title = State()
-    body = State()
+    description = State()
     image = State()
     price = State()
     confirm = State()
