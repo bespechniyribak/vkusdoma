@@ -106,9 +106,10 @@ async def on_startup(dp):
     basicConfig(level=INFO)
     await set_bot_commands()
 
-pass
+if __name__ == '__main__':
+    try:
+        lock_fd = acquire_lock()
+        executor.start_polling(dp, on_startup=on_startup)
     finally:
         release_lock(lock_fd)
 
-if __name__ == '__main__':
-    executor.start_polling(dp, on_startup=on_startup)
