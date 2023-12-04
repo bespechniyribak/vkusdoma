@@ -15,7 +15,7 @@ import handlers, requests
 from handlers import dp
 from handlers.user.menu import catalog, cart, delivery_status
 
-LOCK_PATH = "/tmp/bot.lock"
+OCK_PATH = "/tmp/bot.lock"
 
 def acquire_lock():
     try:
@@ -33,14 +33,11 @@ def release_lock(lock_fd):
 def main():
     lock_fd = acquire_lock()
 
-
-
+    try:
 
 user_message = 'Пользователь'
 admin_message = 'Админ'
 menu = 'Начать покупки'
-
-
 
 
 @dp.message_handler(commands='start')
@@ -117,7 +114,9 @@ async def on_startup(dp):
     basicConfig(level=INFO)
     await set_bot_commands()
 
-release_lock(lock_fd)
+pass
+    finally:
+        release_lock(lock_fd)
 
 if __name__ == '__main__':
     executor.start_polling(dp, on_startup=on_startup)
