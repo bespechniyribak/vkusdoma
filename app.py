@@ -55,14 +55,14 @@ async def cmd_start(message: types.Message):
 @dp.message_handler(text=admin_message)
 async def admin_mode(message: types.Message):
     status = True
-    res = requests.post('http://localhost:8000/bot/admins/', data={'user_id': message.from_user.id, 'status': status})
+    res = requests.post('https://chtb.onrender.com/bot/admins/', data={'user_id': message.from_user.id, 'status': status})
     await message.answer('Включен админский режим.',
                          reply_markup=ReplyKeyboardRemove())
 
 @dp.message_handler(text=user_message)
 async def user_mode(message: types.Message):
     status = False
-    res = requests.post('http://localhost:8000/bot/admins/', data={'user_id': message.from_user.id, 'status': status})
+    res = requests.post('https://chtb.onrender.com/bot/admins/', data={'user_id': message.from_user.id, 'status': status})
     await message.answer('Включен пользовательский режим.',
                          reply_markup=ReplyKeyboardRemove())
 

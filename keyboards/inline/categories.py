@@ -8,7 +8,7 @@ def categories_markup():
     global category_cb
 
     markup = InlineKeyboardMarkup()
-    cats = requests.get('http://localhost:8000/bot/category/').json()
+    cats = requests.get('https://chtb.onrender.com/bot/category/').json()
     for cat in cats:
         markup.add(InlineKeyboardButton(cat['title'],
                                         callback_data=category_cb.new(id=cat['id'],

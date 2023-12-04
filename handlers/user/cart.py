@@ -18,7 +18,7 @@ from .menu import *
 
 @dp.message_handler(IsUser(), text=cart)
 async def process_cart(message: Message, state: FSMContext):
-    cart_data = requests.get('http://localhost:8000/bot/cart/?user_id=' + str(message.chat.id)).json()
+    cart_data = requests.get('https://chtb.onrender.com/bot/cart/?user_id=' + str(message.chat.id)).json()
     if len(cart_data) == 0:
 
         await message.answer('Ваша корзина пуста.')
@@ -33,10 +33,10 @@ async def process_cart(message: Message, state: FSMContext):
 
         for cart in cart_data:
 
-            product = requests.get('http://localhost:8000/bot/product/' + str(cart['product'])).json()
+            product = requests.get('https://chtb.onrender.com/bot/product/' + str(cart['product'])).json()
             if product == None:
 
-                res = requests.delete('http://localhost:8000/bot/cart/' + str(cart['id']) + '/')
+                res = requests.delete('https://chtb.onrender.com/bot/cart/' + str(cart['id']) + '/')
 
             else:
                 title = product['title']
@@ -66,8 +66,8 @@ async def process_cart(message: Message, state: FSMContext):
 
 @dp.callback_query_handler(IsUser(), product_cb.filter(action='delete'), state='*')
 async def product_callback_handler(query: CallbackQuery, callback_data: dict, state: FSMContext):
-    res = requests.delete('http://localhost:8000/bot/cart/' + str(callback_data['id']) + '/')
-    res2 = requests.get('http://localhost:8000/bot/cart/?user_id=' + str(query.message.chat.id)).json()
+    res = requests.delete('https://chtb.onrender.com/bot/cart/' + str(callback_data['id']) + '/')
+    res2 = requests.get('https://chtb.onrender.com/bot/cart/?user_id=' + str(query.message.chat.id)).json()
 
     await query.answer('Удалено.')
     await query.message.delete()
@@ -212,7 +212,7 @@ async def process_confirm(message: Message, state: FSMContext):
             'adress': address,
 
         }
-        res = requests.post('http://localhost:8000/bot/order/', data=order)
+        res = requests.post('https://chtb.onrender.com/bot/order/', data=order)
         await message.answer(
             f'Ок! Ваш заказ №{res.text} принят, будет сделан и доставлен, '
             f'после согласования с вами через Телеграм 📱\nИмя: <b>' + data[

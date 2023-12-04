@@ -7,7 +7,7 @@ import requests
 
 @dp.message_handler(IsAdmin(), text=orders)
 async def process_orders(message: Message):
-    orders = requests.get('http://localhost:8000/bot/order/').json()
+    orders = requests.get('https://chtb.onrender.com/bot/order/').json()
     if len(orders) == 0:
         await message.answer('У вас нет заказов.')
     else:

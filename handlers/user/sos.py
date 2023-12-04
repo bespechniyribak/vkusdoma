@@ -45,7 +45,7 @@ async def process_submit(message: Message, state: FSMContext):
 
     async with state.proxy() as data:
         full_name = message.from_user.full_name
-        res = requests.post('http://localhost:8000/bot/question/',
+        res = requests.post('https://chtb.onrender.com/bot/question/',
                             {'question': data['question'], 'message_id': data['message_id'],
                              "user_id": int(message.from_user.id), "full_name": full_name})
 

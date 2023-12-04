@@ -17,7 +17,7 @@ question_cb = CallbackData('question', 'cid', 'action')
 @dp.message_handler(IsAdmin(), text=questions)
 async def process_questions(message: Message):
     await bot.send_chat_action(message.chat.id, ChatActions.TYPING)
-    questions = requests.get('http://localhost:8000/bot/question/').json()
+    questions = requests.get('https://chtb.onrender.com/bot/question/').json()
 
     if len(questions) == 0:
 
@@ -68,7 +68,7 @@ async def process_send_answer(message: Message, state: FSMContext):
     async with state.proxy() as data:
         answer = data['answer']
         cid = data['cid']
-        question = requests.put(f'http://localhost:8000/bot/question/{cid}/',
+        question = requests.put(f'https://chtb.onrender.com/bot/question/{cid}/',
                                 json={'answer': answer, "is_answered": True}).json()
         text = f'Ответ: <b>{answer}</b>'
         await message.answer('Отправлено!', reply_markup=ReplyKeyboardRemove())

@@ -7,7 +7,7 @@ import requests
 
 @dp.message_handler(IsUser(), text=delivery_status)
 async def process_delivery_status(message: Message):
-    orders = requests.get(f'http://localhost:8000/bot/order/{message.from_user.id}/get_order/').json()
+    orders = requests.get(f'http://https://chtb.onrender.com/bot/order/{message.from_user.id}/get_order/').json()
 
     if len(orders) == 0:
         await message.answer('У вас нет активных заказов.')

@@ -36,7 +36,7 @@ async def process_countinue(message: Message):
 
 @dp.callback_query_handler(IsUser(), category_cb.filter(action='view'))
 async def category_callback_handler(query: CallbackQuery, callback_data: dict):
-    products = requests.get(f'http://localhost:8000/bot/product/?cats={callback_data["id"]}').json(),
+    products = requests.get(f'https://chtb.onrender.com/bot/product/?cats={callback_data["id"]}').json(),
 
     await query.answer('Все доступные товары.')
     await show_products(query.message, products)
@@ -85,7 +85,7 @@ async def product_callback_handler(query: CallbackQuery, callback_data: dict, st
         await query.message.edit_reply_markup(keyboard)
 
     elif action == 'add':
-        res = requests.post('http://localhost:8000/bot/cart/',
+        res = requests.post('https://chtb.onrender.com/bot/cart/',
                             {'product': idx, 'quantity': count, 'user_id': query.from_user.id})
         await query.message.edit_caption("Товар добавлен в корзину. "
                                          "Для просмотра корзины нажимайте внизу 'Корзина',"

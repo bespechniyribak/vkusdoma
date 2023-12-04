@@ -29,7 +29,7 @@ delete_category = '🗑️ Удалить категорию'
 async def process_settings(message: Message):
 
     markup = InlineKeyboardMarkup()
-    cats = requests.get('http://localhost:8000/bot/category/').json()
+    cats = requests.get('https://chtb.onrender.com/bot/category/').json()
     print(cats)
     for cat in cats:
 
@@ -53,7 +53,7 @@ async def add_category_callback_handler(query: CallbackQuery):
 async def set_category_title_handler(message: Message, state: FSMContext):
 
     category = message.text
-    requests.post("http://localhost:8000/bot/category/",{"title":category})
+    requests.post("https://chtb.onrender.com/bot/category/",{"title":category})
 
     await state.finish()
     await process_settings(message)
@@ -64,7 +64,7 @@ async def category_callback_handler(query: CallbackQuery, callback_data: dict,
     print(category_idx)
 
 
-    products = requests.get(f'http://localhost:8000/bot/product/?cats={category_idx}').json()
+    products = requests.get(f'https://chtb.onrender.com/bot/product/?cats={category_idx}').json()
     print(products)
     await query.message.delete()
     await query.answer('Все добавленные товары в эту категорию.')
@@ -105,7 +105,7 @@ async def delete_category_handler(message: Message, state: FSMContext):
         if 'category' in data.keys():
             idx = data['category']
 
-            res = requests.delete(f'http://localhost:8000/bot/category/{idx}/')
+            res = requests.delete(f'https://chtb.onrender.com/bot/category/{idx}/')
 
             await message.answer('Готово!', reply_markup=ReplyKeyboardRemove())
             await process_settings(message)
@@ -216,13 +216,13 @@ async def process_confirm(message: Message, state: FSMContext):
             'description': description,
             'price': price,
             'category': category,
-            "image": "http://localhost:8000"+data['image']
+            "image": "https://chtb.onrender.com"+data['image']
         }
 
         # Include the image data in the form data with the correct field name
 
         # Send the POST request with the correct content type
-        res = requests.post("http://localhost:8000/bot/product/", data=form_data)
+        res = requests.post("https://chtb.onrender.com/bot/product/", data=form_data)
         
 
     await state.finish()
@@ -234,7 +234,7 @@ async def delete_product_callback_handler(query: CallbackQuery,
                                           callback_data: dict):
     product_idx = callback_data['id']
 
-    res = requests.delete(f"http://localhost:8000/bot/product/{product_idx}/")
+    res = requests.delete(f"https://chtb.onrender.com/bot/product/{product_idx}/")
     print(res)
     await query.answer('Удалено!')
     await query.message.delete()
