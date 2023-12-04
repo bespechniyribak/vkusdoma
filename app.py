@@ -33,11 +33,11 @@ def release_lock(lock_fd):
 def main():
     lock_fd = acquire_lock()
 
-    try:
+try:
 
-user_message = 'Пользователь'
-admin_message = 'Админ'
-menu = 'Начать покупки'
+    user_message = 'Пользователь'
+    admin_message = 'Админ'
+    menu = 'Начать покупки'
 
 
 @dp.message_handler(commands='start')
