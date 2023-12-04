@@ -1,3 +1,6 @@
+import os
+import sys
+import fcntl
 from aiogram import types
 from aiogram import Dispatcher
 from aiogram.types import Message
@@ -12,6 +15,25 @@ from loader import db, bot
 import handlers, requests
 from handlers import dp
 from handlers.user.menu import catalog, cart, delivery_status
+
+lock_file = 'bot.lock'
+
+def check_if_running():
+    try:
+        file_descriptor = open(lock_file, 'w')
+        fcntl.lockf(file_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return False
+    except IOError:
+        return True
+
+if check_if_running():
+    print("Another instance of the bot is already running.")
+    sys.exit()
+
+# Инициализация бота и диспетчера
+bot = Bot(token='6810545901:AAE3iPbhGYcaCV_auyHcjVYdlYClbIRK8oQ')
+dp = Dispatcher(bot)
+
 
 
 user_message = 'Пользователь'
